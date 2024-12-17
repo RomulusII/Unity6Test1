@@ -1,9 +1,9 @@
-﻿namespace GameCore.Map
-{
-    public enum CellVegetation
-    {
-        NotSet,
-        Yok,
-        Orman
-    }
-}
+﻿//namespace Model
+//{
+//    public enum CellVegetation
+//    {
+//        NotSet,
+//        Yok,
+//        Orman
+//    }
+//}

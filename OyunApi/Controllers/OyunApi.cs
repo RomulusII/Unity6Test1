@@ -1,6 +1,7 @@
 using GameCore.Map;
 using GameCore.Services;
 using Microsoft.AspNetCore.Mvc;
+using Model.UnityOyun.Assets.Model;
 
 namespace OyunApi.Controllers
 {

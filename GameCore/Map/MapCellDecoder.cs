@@ -1,10 +1,10 @@
 using GameCore.Services;
+using Model.UnityOyun.Assets.Model;
 using System.Diagnostics;
 using System.Drawing;
 
 namespace GameCore.Map
 {
-
     public class MapCellDecoder : MapCellBase
     {
         public string SeedFromBitmapUndefinedInfo { get; set; } = string.Empty;

@@ -1,11 +1,11 @@
-﻿namespace GameCore.Map
-{
-    public enum CellWater
-    {
-        NotSet,
-        Yok,
-        Dere,
-        Nehir,
-        Delta
-    }
-}
+﻿//namespace Model
+//{
+//    public enum CellWater
+//    {
+//        NotSet,
+//        Yok,
+//        Dere,
+//        Nehir,
+//        Delta
+//    }
+//}
