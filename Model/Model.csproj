@@ -19,6 +19,7 @@
     <Compile Include="UnityOyun\Assets\Model\CellWater.cs" />
     <Compile Include="UnityOyun\Assets\Model\CoordinateBase.cs" />
     <Compile Include="UnityOyun\Assets\Model\MapCellBase.cs" />
+    <Compile Include="UnityOyun\Assets\Model\Player.cs" />
   </ItemGroup>
 
 </Project>

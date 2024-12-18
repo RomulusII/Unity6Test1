@@ -63,13 +63,14 @@
   <ItemGroup>
     <Compile Include="Assets\TilemapManager.cs" />
     <Compile Include="Assets\Model\CellWater.cs" />
+    <Compile Include="Assets\WebSocketManager.cs" />
     <Compile Include="Assets\Model\CellAltitude.cs" />
     <Compile Include="Assets\Model\CellVegetation.cs" />
+    <Compile Include="Assets\Model\Player.cs" />
     <Compile Include="Assets\Model\CoordinateBase.cs" />
     <Compile Include="Assets\Model\CellTerrain.cs" />
     <Compile Include="Assets\CameraMovement.cs" />
     <Compile Include="Assets\Model\MapCellBase.cs" />
-    <Compile Include="Assets\OyunSocket.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
