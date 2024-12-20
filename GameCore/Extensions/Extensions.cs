@@ -8,7 +8,7 @@ namespace GameCore.Extensions
     {
         public static MapCellDecoder? GetHucre(this Unit unit)
         {
-            return GameService.Game?.Harita?.Hucreler?[unit.X, unit.Y];
+            return GameServiceStatic.GameService?.Harita?.Hucreler?[unit.X, unit.Y];
         }
     }
 

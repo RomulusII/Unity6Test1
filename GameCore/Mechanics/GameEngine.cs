@@ -12,7 +12,7 @@ namespace GameCore.Mechanics
 
         public void MoveNpcs()
         {
-            foreach(Unit u in Services.GameService.Game.GameContext.Units)
+            foreach(Unit u in Services.GameServiceStatic.GameService.GameContext.Units)
             {
                 
             }

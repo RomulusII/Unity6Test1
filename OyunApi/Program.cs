@@ -1,6 +1,17 @@
 ﻿
+using GameCore.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
+
+// register dependency injection for GameService
+builder.Services.AddSingleton<GameService>();
+
+builder.Services.AddSingleton<GameService>();
+
+// Add services to the container.
+
+
 
 var SocketProcesser = new SocketProcesser();
 

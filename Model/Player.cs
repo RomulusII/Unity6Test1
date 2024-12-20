@@ -1,14 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Model.UnityOyun.Assets.Model;
 
 namespace Model
 {
-    public class Player
+    public class Player : PlayerBase
     {
-        [Key]
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public string Email { get; set; }
-
         public ICollection<Unit> Units { get; set; }
     }
 }

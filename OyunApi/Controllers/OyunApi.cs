@@ -22,7 +22,7 @@ namespace OyunApi.Controllers
         {
             try
             {
-                var cell = GameService.Game.Harita.Hucreler[x, y];
+                var cell = GameServiceStatic.GameService.Harita.Hucreler[x, y];
                 return Ok(cell);
 
             }
@@ -46,10 +46,10 @@ namespace OyunApi.Controllers
 
                 var rslt = new List<List<MapCellBase>>();
 
-                var maxX = Math.Min(x + maxCell, GameService.Game.Harita.MaxX);
+                var maxX = Math.Min(x + maxCell, GameServiceStatic.GameService.Harita.MaxX);
                 var minX = Math.Max(x - maxCell, 0);
 
-                var maxY = Math.Min(y + maxCell, GameService.Game.Harita.MaxY);
+                var maxY = Math.Min(y + maxCell, GameServiceStatic.GameService.Harita.MaxY);
                 var minY = Math.Max(y - maxCell, 0);
 
                 for(int i = minY; i < maxY; i++)
@@ -60,7 +60,7 @@ namespace OyunApi.Controllers
                     for (int j = minX; j < maxX; j++)
                     {
 
-                        var hucre = GameService.Game.Harita.Hucreler[j, i];
+                        var hucre = GameServiceStatic.GameService.Harita.Hucreler[j, i];
                         hucreLine.Add(hucre);
                     }
                 }

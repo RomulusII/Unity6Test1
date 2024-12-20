@@ -1,4 +1,5 @@
-﻿using Model.UnityOyun.Assets.Model;
+﻿using GameCore.Services;
+using Model.UnityOyun.Assets.Model;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
@@ -13,7 +14,7 @@ public class SocketProcesser
     public async Task HandleConnection(WebSocket webSocket)
     {
         var playerId = Guid.NewGuid().ToString(); // Benzersiz bir oyuncu ID'si
-        var player = new PlayerSocket(playerId, webSocket);
+        var player = new PlayerSocket(webSocket);
         activeConnections[playerId] = player;
 
         try
@@ -55,9 +56,19 @@ public class SocketProcesser
                 switch (request.Action)
                 {
                     case nameof(RequestActionType.Login):
-                        player.Name = request.Data; // Oyuncunun adını ayarla
-                        Console.WriteLine($"Oyuncu giriş yaptı: {player.Name}");
-                        await player.SendMessage($"Hoş geldin {player.Name}!");
+                        var loginReq = JsonSerializer.Deserialize<LoginRequest>(message);
+                        var user = await GameServiceStatic.PlayerService.GetPlayer(loginReq.Email, loginReq.Password);
+
+                        if (user == null)
+                        {
+                            await player.SendMessage("Kullanıcı adı veya parola yanlış!");
+                            break;
+                        }
+
+                        player.Player = user;
+
+                        Console.WriteLine($"Oyuncu giriş yaptı: {player.Player.Email}");
+                        await player.SendMessage($"Hoş geldin {player.Player.Name}!");
                         break;
 
                     case nameof(RequestActionType.GetObjects):
@@ -110,14 +121,16 @@ public enum RequestActionType
 // --- Yardımcı Sınıflar ---
 
 // Oyuncu sınıfı (Actor-Like)
-public class PlayerSocket : PlayerBase
+public class PlayerSocket
 {
+    public bool LoggedIn { get; set; } = false;
     private WebSocket WebSocket { get; }
     private List<string> OwnedObjects { get; } = new List<string>();
 
-    public PlayerSocket(string id, WebSocket webSocket)
+    public PlayerBase Player { get; set; }
+
+    public PlayerSocket(WebSocket webSocket)
     {
-        Id = id;
         WebSocket = webSocket;
 
         // Oyuncunun sahip olduğu varsayılan nesneler
@@ -139,6 +152,19 @@ public class PlayerSocket : PlayerBase
         var segment = new ArraySegment<byte>(buffer);
         await WebSocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
     }
+
+    public async Task<bool> LogIn(LoginRequest loginRequest)
+    {
+        Player = await GameServiceStatic.PlayerService.Login(loginRequest.Email, loginRequest.Password);
+        return Player != null;
+    }
+
+}
+
+public class LoginRequest
+{
+    public string Email { get; set; }
+    public string Password { get; set; }
 }
 
 // İstemci tarafından gönderilen mesaj model

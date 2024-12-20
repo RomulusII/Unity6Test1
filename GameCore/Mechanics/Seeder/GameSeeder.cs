@@ -14,17 +14,17 @@ namespace GameCore.Mechanics.Seeder
         private static void SeedUnits()
         {
             var npc = new Player();
-            GameService.Game.GameContext.TruncateTable("Units");
-            GameService.Game.GameContext.TruncateTable("UnitJobs");
-            GameService.Game.GameContext.TruncateTable("Chest");
+            GameServiceStatic.GameService.GameContext.TruncateTable("Units");
+            GameServiceStatic.GameService.GameContext.TruncateTable("UnitJobs");
+            GameServiceStatic.GameService.GameContext.TruncateTable("Chest");
             var rnd = new Random();
             for (int i = 0; i < 3000; i++)
             {
-                var randomCell = GameService.Game.Harita.GetRandomLandCell(rnd);
+                var randomCell = GameServiceStatic.GameService.Harita.GetRandomLandCell(rnd);
                 Unit u = new Unit(npc, randomCell.X, randomCell.Y);
-                Services.GameService.Game.GameContext.Units.Add(u);
+                Services.GameServiceStatic.GameService.GameContext.Units.Add(u);
             }
-            Services.GameService.Game.GameContext.SaveChanges();
+            Services.GameServiceStatic.GameService.GameContext.SaveChanges();
         }
     }
 }

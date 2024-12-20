@@ -133,7 +133,7 @@ namespace GameCore.Map
         }
         public override string ToString()
         {
-            var units = GameService.Game.GameContext.Units.Where(u => Math.Abs(u.X-X) + Math.Abs(u.Y - Y) < 10);
+            var units = GameServiceStatic.GameService.GameContext.Units.Where(u => Math.Abs(u.X-X) + Math.Abs(u.Y - Y) < 10);
             var unitStr = string.Empty;
             foreach (var unit in units)
                 {

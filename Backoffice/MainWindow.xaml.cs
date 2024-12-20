@@ -61,7 +61,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         tanimsizRenkHandler = new TanimsizRenkHandler(OnTanimsizRenk);
 
-        GameService.Game.HaritaCreator.OnTanimsizRenk += tanimsizRenkHandler;
+        GameServiceStatic.GameService.HaritaCreator.OnTanimsizRenk += tanimsizRenkHandler;
 
         var m = hedef.Margin;
 
@@ -87,7 +87,7 @@ public partial class MainWindow : Window
 
     private void button_Click(object sender, RoutedEventArgs e)
     {
-        image.Source = ToBitmapImage(GameService.Game.HaritaCreator.ZeminHarita);
+        image.Source = ToBitmapImage(GameServiceStatic.GameService.HaritaCreator.ZeminHarita);
     }
 
     public static BitmapImage ToBitmapImage(Bitmap bitmap)
@@ -109,17 +109,17 @@ public partial class MainWindow : Window
 
     private void btnDagTepe_Click(object sender, RoutedEventArgs e)
     {
-        image.Source = ToBitmapImage(GameService.Game.HaritaCreator.DagHarita);
+        image.Source = ToBitmapImage(GameServiceStatic.GameService.HaritaCreator.DagHarita);
     }
 
     private void btnOrman_Click(object sender, RoutedEventArgs e)
     {
-        image.Source = ToBitmapImage(GameService.Game.HaritaCreator.OrmanHarita);
+        image.Source = ToBitmapImage(GameServiceStatic.GameService.HaritaCreator.OrmanHarita);
     }
 
     private void btnNehir_Click(object sender, RoutedEventArgs e)
     {
-        image.Source = ToBitmapImage(GameService.Game.HaritaCreator.NehirHarita);
+        image.Source = ToBitmapImage(GameServiceStatic.GameService.HaritaCreator.NehirHarita);
     }
 
     private async void button_Click_1(object sender, RoutedEventArgs e)
@@ -160,9 +160,9 @@ public partial class MainWindow : Window
         {
             var pos = e.GetPosition(image);
 
-            if (GameService.Game.Harita.Hucreler != null)
+            if (GameServiceStatic.GameService.Harita.Hucreler != null)
             {
-                var hucre = GameService.Game.Harita.Hucreler[(int)pos.X, (int)pos.Y];
+                var hucre = GameServiceStatic.GameService.Harita.Hucreler[(int)pos.X, (int)pos.Y];
                 if (hucre != null)
                     hucreInfo = $"Hucre ({hucre.X},{hucre.Y}) {hucre.ToString()}";
 
@@ -187,9 +187,9 @@ public partial class MainWindow : Window
     {
         var pos = e.GetPosition(image);
 
-        if (GameService.Game.Harita.Hucreler != null)
+        if (GameServiceStatic.GameService.Harita.Hucreler != null)
         {
-            var hucre = GameService.Game.Harita.Hucreler[(int)pos.X, (int)pos.Y];
+            var hucre = GameServiceStatic.GameService.Harita.Hucreler[(int)pos.X, (int)pos.Y];
             if (hucre != null)
                 textBlock.Text = $"{TimeService.ToTimeString()} Hucre ({hucre.X},{hucre.Y}) {hucre.ToString()}";
         }
@@ -228,12 +228,12 @@ public partial class MainWindow : Window
         var red = System.Windows.Media.Color.FromRgb(200, 0, 0);
         GameFieldCanvas.Children.Clear();
         GameFieldCanvas.Children.Add(image);
-        GameFieldCanvas.Width = GameService.Game.Harita.MaxX;
-        GameFieldCanvas.Height= GameService.Game.Harita.MaxY;
+        GameFieldCanvas.Width = GameServiceStatic.GameService.Harita.MaxX;
+        GameFieldCanvas.Height= GameServiceStatic.GameService.Harita.MaxY;
 
         SolidColorBrush newColor = new SolidColorBrush(red);
 
-        foreach (var u in GameService.Game.GameContext.Units)
+        foreach (var u in GameServiceStatic.GameService.GameContext.Units)
         {
             var ellipse = new Ellipse() { Width = communityWidth, Height = communityWidth };
 
