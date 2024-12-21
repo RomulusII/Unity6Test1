@@ -57,7 +57,7 @@ public class SocketProcesser
                 {
                     case nameof(RequestActionType.Login):
                         var loginReq = JsonSerializer.Deserialize<LoginRequest>(message);
-                        var user = await GameServiceStatic.PlayerService.GetPlayer(loginReq.Email, loginReq.Password);
+                        var user = await GameServiceStatic.PlayerService.Login(loginReq.Email, loginReq.Password);                         
 
                         if (user == null)
                         {

@@ -39,7 +39,20 @@ namespace GameCore.Services
 
     public class PlayerService
     {
-        public async Task<Player?> GetPlayer(int userId)
+        public Dictionary<int, Player> LoggedInPlayers { get; } = new Dictionary<int, Player>();
+
+        public async Task<Player?> Login(string email, string password)
+        {
+            var player = await GetPlayer(email, password);
+            if (player == null) {
+                return null;
+            }
+
+            LoggedInPlayers.Add(player.Id, player);
+            return player;
+        }
+     
+        public static async Task<Player?> GetPlayer(int userId)
         {
             return await Task.Run(() =>
             {
@@ -47,7 +60,7 @@ namespace GameCore.Services
             });
         }
 
-        public async Task<Player?> GetPlayer(string email, string password)
+        public static async Task<Player?> GetPlayer(string email, string password)
         {
             return await Task.Run(() =>
             {
