@@ -5,13 +5,14 @@ using System.Threading.Tasks;
 using System.Net.WebSockets;
 using UnityEngine;
 
-public class WebSocketClient : MonoBehaviour
+public class ClientSocket : MonoBehaviour
 {
-    private ClientWebSocket _webSocket;
+    private ClientWebSocket webSocket;
     private CancellationTokenSource _cancellationTokenSource;
 
     [Header("WebSocket Settings")]
     public string serverUri = "ws://localhost:8080/ws"; // WebSocket server address
+
     public bool autoConnectOnStart = true;
 
     private async void Start()
@@ -26,13 +27,13 @@ public class WebSocketClient : MonoBehaviour
     {
         try
         {
-            _webSocket = new ClientWebSocket();
+            webSocket = new ClientWebSocket();
             _cancellationTokenSource = new CancellationTokenSource();
 
             Debug.Log($"Connecting to WebSocket server: {serverUri}...");
-            await _webSocket.ConnectAsync(new Uri(serverUri), _cancellationTokenSource.Token);
+            await webSocket.ConnectAsync(new Uri(serverUri), _cancellationTokenSource.Token);
 
-            if (_webSocket.State == WebSocketState.Open)
+            if (webSocket.State == WebSocketState.Open)
             {
                 Debug.Log("WebSocket connection established!");
                 _ = ReceiveMessages(); // Start receiving messages in the background
@@ -53,9 +54,9 @@ public class WebSocketClient : MonoBehaviour
 
         try
         {
-            while (_webSocket != null && _webSocket.State == WebSocketState.Open)
+            while (webSocket != null && webSocket.State == WebSocketState.Open)
             {
-                var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
+                var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
 
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
@@ -65,7 +66,7 @@ public class WebSocketClient : MonoBehaviour
                 else if (result.MessageType == WebSocketMessageType.Close)
                 {
                     Debug.Log("WebSocket server closed the connection.");
-                    await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
                 }
             }
         }
@@ -77,7 +78,7 @@ public class WebSocketClient : MonoBehaviour
 
     public async void SendTextMessage(string message)
     {
-        if (_webSocket == null || _webSocket.State != WebSocketState.Open)
+        if (webSocket == null || webSocket.State != WebSocketState.Open)
         {
             Debug.LogWarning("WebSocket is not connected. Cannot send message.");
             return;
@@ -86,7 +87,7 @@ public class WebSocketClient : MonoBehaviour
         try
         {
             byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-            await _webSocket.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
+            await webSocket.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
             Debug.Log($"Message sent: {message}");
         }
         catch (Exception ex)
@@ -97,12 +98,12 @@ public class WebSocketClient : MonoBehaviour
 
     private async void OnApplicationQuit()
     {
-        if (_webSocket != null)
+        if (webSocket != null)
         {
             try
             {
-                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Application quitting", _cancellationTokenSource.Token);
-                _webSocket.Dispose();
+                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Application quitting", _cancellationTokenSource.Token);
+                webSocket.Dispose();
                 _cancellationTokenSource.Cancel();
             }
             catch (Exception ex)

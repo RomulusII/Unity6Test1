@@ -1,22 +1,70 @@
 ﻿using GameCore.Services;
+using Model;
 using Model.UnityOyun.Assets.Model;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
-
 public class SocketProcesser
 {
-    public ConcurrentDictionary<string, PlayerSocket> activeConnections = new ConcurrentDictionary<string, PlayerSocket>();
+    public List<PlayerSocket> activeConnections = new List<PlayerSocket>();
 
     // Oyuncu bağlantısını yöneten metot
-    public async Task HandleConnection(WebSocket webSocket)
+    public async Task HandleNewConnection(WebSocket webSocket)
     {
         var playerId = Guid.NewGuid().ToString(); // Benzersiz bir oyuncu ID'si
-        var player = new PlayerSocket(webSocket);
-        activeConnections[playerId] = player;
+        var playerSocket = new PlayerSocket(webSocket);
+        activeConnections.Add(playerSocket);
 
+        try
+        {
+            // WebSocket bağlantısı açık olduğu sürece mesajları dinle
+            await playerSocket.ListenConnection();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Bağlantı hatası: {ex.Message}");
+        }
+        finally
+        {
+            // Bağlantıyı temizle
+            activeConnections.Remove(playerSocket);
+            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Bağlantı kapatıldı", CancellationToken.None);
+            Console.WriteLine($"Oyuncu {playerId} bağlantısını kapattı.");
+        }
+    }
+}
+
+public enum RequestActionType
+{
+    Login,
+    GetObjects
+}
+
+// --- Yardımcı Sınıflar ---
+
+// Oyuncu sınıfı (Actor-Like)
+public class PlayerSocket
+{
+    public bool LoggedIn { get; set; } = false;
+    private WebSocket webSocket { get; }
+    private List<string> OwnedObjects { get; } = new List<string>();
+
+    public PlayerBase Player { get; set; }
+
+    public PlayerSocket(WebSocket webSocket)
+    {
+        this.webSocket = webSocket;
+
+        // Oyuncunun sahip olduğu varsayılan nesneler
+        OwnedObjects.Add("Kale");
+        OwnedObjects.Add("Asker");
+        OwnedObjects.Add("Maden");
+    }
+
+    public async Task ListenConnection()
+    {
         try
         {
             // WebSocket bağlantısı açık olduğu sürece mesajları dinle
@@ -26,7 +74,7 @@ public class SocketProcesser
                 if (message != null)
                 {
                     Console.WriteLine($"İstemciden mesaj alındı: {message}");
-                    await HandleMessage(player, message);
+                    await HandleMessage(message);
                 }
             }
         }
@@ -37,71 +85,10 @@ public class SocketProcesser
         finally
         {
             // Bağlantıyı temizle
-            activeConnections.TryRemove(playerId, out _);
+            // activeConnections.TryRemove(playerId, out _);
             await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Bağlantı kapatıldı", CancellationToken.None);
-            Console.WriteLine($"Oyuncu {playerId} bağlantısını kapattı.");
+            Console.WriteLine($"Oyuncu {Player?.ToString()} bağlantısını kapattı.");
         }
-    }
-
-    // Mesajları işleyen metot
-    async Task HandleMessage(PlayerSocket player, string message)
-    {
-        try
-        {
-            // Mesajı JSON olarak çözümle
-            var request = JsonSerializer.Deserialize<RequestMessage>(message);
-
-            if (request != null)
-            {
-                switch (request.Action)
-                {
-                    case nameof(RequestActionType.Login):
-                        await HandleLoginRequest(player, message);
-                        break;
-
-                    case nameof(RequestActionType.GetObjects):
-                        await HandleGetObjectsRequest(player);
-                        break;
-
-                    default:
-                        await player.SendMessage("Bilinmeyen bir eylem!");
-                        break;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Mesaj işlenirken hata oluştu: {ex.Message}");
-        }
-    }
-
-    private async Task HandleLoginRequest(PlayerSocket player, string message)
-    {
-        var loginReq = JsonSerializer.Deserialize<LoginRequest>(message);
-        var user = await GameServiceStatic.PlayerService.Login(loginReq.Email, loginReq.Password);
-
-        if (user == null)
-        {
-            await SendLoginResponse(player, false, "Kullanıcı adı veya parola yanlış!");
-            return;
-        }
-
-        player.Player = user;
-
-        Console.WriteLine($"Oyuncu giriş yaptı: {player.Player.Email}");
-
-        await SendLoginResponse(player, true, $"Hoş geldin {player.Player.Name}!");
-    }
-
-    private async Task HandleGetObjectsRequest(PlayerSocket player)
-    {
-        var objects = player.GetOwnedObjects(); // Oyuncunun sahip olduğu nesneler
-        var response = new ResponseMessage
-        {
-            Action = "object_list",
-            Data = JsonSerializer.Serialize(objects)
-        };
-        await player.SendMessage(JsonSerializer.Serialize(response));
     }
 
     // WebSocket'ten mesaj alma metodu
@@ -122,42 +109,84 @@ public class SocketProcesser
         return null;
     }
 
-    public async Task SendLoginResponse(PlayerSocket player, bool success, string message)
+    // Mesajları işleyen metot
+    async Task HandleMessage(string message)
+    {
+        try
+        {
+            // Mesajı JSON olarak çözümle
+            var request = JsonSerializer.Deserialize<SocketMessage>(message);
+
+            if (request != null)
+            {
+                if(!LoggedIn && request.Action != nameof(RequestActionType.Login))
+                {
+                    await SendMessage("Önce giriş yapmalısınız!");
+                    return;
+                }
+
+                switch (request.Action)
+                {
+                    case nameof(RequestActionType.Login):
+                        await HandleLoginRequest(message);
+                        break;
+
+                    case nameof(RequestActionType.GetObjects):
+                        await HandleGetObjectsRequest();
+                        break;
+
+                    default:
+                        await SendMessage("Bilinmeyen bir eylem!");
+                        break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Mesaj işlenirken hata oluştu: {ex.Message}");
+        }
+    }
+
+
+    private async Task HandleLoginRequest(string message)
+    {
+        var loginReq = JsonSerializer.Deserialize<LoginRequest>(message);
+        var user = await GameServiceStatic.PlayerService.Login(loginReq.Email, loginReq.Password);
+
+        if (user == null)
+        {
+            await SendLoginResponse(false, "Kullanıcı adı veya parola yanlış!");
+            return;
+        }
+
+        Player = user;
+
+        Console.WriteLine($"Oyuncu giriş yaptı: {Player.Email}");
+
+        await SendLoginResponse(true, $"Hoş geldin {Player.Name}!");
+    }
+
+    private async Task HandleGetObjectsRequest()
+    {
+        var objects = GetOwnedObjects(); // Oyuncunun sahip olduğu nesneler
+        var response = new ResponseMessage
+        {
+            Action = "object_list",
+            Data = JsonSerializer.Serialize(objects)
+        };
+        await SendMessage(JsonSerializer.Serialize(response));
+    }
+
+
+
+    public async Task SendLoginResponse(bool success, string message)
     {
         var loginResponse = new LoginResponse
         {
             Success = success,
             Message = message
         };
-        await player.SendMessage(JsonSerializer.Serialize(loginResponse));
-    }
-}
-
-public enum RequestActionType
-{
-    Login,
-    GetObjects
-}
-
-// --- Yardımcı Sınıflar ---
-
-// Oyuncu sınıfı (Actor-Like)
-public class PlayerSocket
-{
-    public bool LoggedIn { get; set; } = false;
-    private WebSocket WebSocket { get; }
-    private List<string> OwnedObjects { get; } = new List<string>();
-
-    public PlayerBase Player { get; set; }
-
-    public PlayerSocket(WebSocket webSocket)
-    {
-        WebSocket = webSocket;
-
-        // Oyuncunun sahip olduğu varsayılan nesneler
-        OwnedObjects.Add("Kale");
-        OwnedObjects.Add("Asker");
-        OwnedObjects.Add("Maden");
+        await SendMessage(JsonSerializer.Serialize(loginResponse));
     }
 
     // Oyuncunun sahip olduğu nesneleri döndür
@@ -171,7 +200,7 @@ public class PlayerSocket
     {
         var buffer = Encoding.UTF8.GetBytes(message);
         var segment = new ArraySegment<byte>(buffer);
-        await WebSocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+        await webSocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
     }
 
     public async Task<bool> LogIn(LoginRequest loginRequest)
@@ -182,29 +211,3 @@ public class PlayerSocket
 
 }
 
-
-public class LoginResponse
-{
-    public bool Success { get; set; }
-    public string Message { get; set; }
-}
-
-public class LoginRequest
-{
-    public string Email { get; set; }
-    public string Password { get; set; }
-}
-
-// İstemci tarafından gönderilen mesaj model
-public class RequestMessage
-{
-    public string Action { get; set; } = "";
-    public string Data { get; set; } = "";
-}
-
-// Sunucunun gönderdiği yanıt model
-public class ResponseMessage
-{
-    public string Action { get; set; } = "";
-    public string Data { get; set; } = "";
-}

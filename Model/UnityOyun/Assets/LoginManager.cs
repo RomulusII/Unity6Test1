@@ -7,6 +7,9 @@ public class LoginManager : MonoBehaviour
     public TMP_InputField passwordInput; // Şifre giriş alanı
     public TextMeshProUGUI errorText;    // Hata mesajlarını göstermek için
 
+    [SerializeField]
+    public ClientSocket clientSocket; // ClientSocket bileşeni
+
     // Login butonuna tıklandığında çağrılan fonksiyon
     public void OnLoginButtonClicked()
     {
@@ -20,8 +23,10 @@ public class LoginManager : MonoBehaviour
             return;
         }
 
-        // Basit bir doğrulama (örnek)
-        if (username == "admin" && password == "1234")
+        var x = clientSocket.Login(username, password); // WebSocket üzerinden login işlemi yap
+
+
+        if (x.Result == "success")
         {
             Debug.Log("Giriş başarılı!");
             // Başarılı girişte başka bir sahneye geçmek için:

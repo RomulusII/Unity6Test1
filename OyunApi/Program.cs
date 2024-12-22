@@ -20,7 +20,7 @@ app.Map("/ws", async context =>
         Console.WriteLine("Yeni bir istemci bağlandı!");
 
         // Oyuncu bağlantısını yönet
-        await SocketProcesser.HandleConnection(webSocket);
+        await SocketProcesser.HandleNewConnection(webSocket);
     }
     else
     {
