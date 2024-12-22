@@ -1,13 +1,11 @@
 ﻿using UnityEngine;
-using UnityEngine.UI; // Unity'nin UI sistemini kullanmak için.
-using TMPro; // TextMeshPro kullanıyorsanız.
+using TMPro; // TextMeshPro bileşenlerini kullanmak için
 
 public class LoginManager : MonoBehaviour
 {
-    // Kullanıcı arayüzündeki elemanlara referanslar.
     public TMP_InputField usernameInput; // Kullanıcı adı giriş alanı
     public TMP_InputField passwordInput; // Şifre giriş alanı
-    public TextMeshProUGUI errorText;    // Hata mesajları için metin
+    public TextMeshProUGUI errorText;    // Hata mesajlarını göstermek için
 
     // Login butonuna tıklandığında çağrılan fonksiyon
     public void OnLoginButtonClicked()
@@ -15,18 +13,18 @@ public class LoginManager : MonoBehaviour
         string username = usernameInput.text; // Kullanıcı adını al
         string password = passwordInput.text; // Şifreyi al
 
-        // Basit bir doğrulama örneği
+        // Boş alan kontrolü
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
             ShowError("Kullanıcı adı ve şifre boş olamaz!");
             return;
         }
 
-        // Yerel doğrulama (örnek)
+        // Basit bir doğrulama (örnek)
         if (username == "admin" && password == "1234")
         {
             Debug.Log("Giriş başarılı!");
-            // Giriş başarılı olduğunda başka bir sahneye geçebilirsiniz.
+            // Başarılı girişte başka bir sahneye geçmek için:
             // UnityEngine.SceneManagement.SceneManager.LoadScene("MainScene");
         }
         else
@@ -38,7 +36,7 @@ public class LoginManager : MonoBehaviour
     // Hata mesajını göstermek için kullanılan fonksiyon
     private void ShowError(string message)
     {
-        errorText.text = message; // Hata mesajını UI'ye yaz
+        errorText.text = message; // Hata mesajını UI'de göster
         errorText.gameObject.SetActive(true); // Hata mesajını görünür yap
     }
 }

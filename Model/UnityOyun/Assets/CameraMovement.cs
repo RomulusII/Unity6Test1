@@ -30,15 +30,25 @@ public class CameraMovement : MonoBehaviour
     // Update is called once per frame
     public void Update()
     {
-        if(Input.GetKey(KeyCode.W)) cameraPosition.y += cameraSpeed;
-        if(Input.GetKey(KeyCode.S)) cameraPosition.y -= cameraSpeed;
-        if(Input.GetKey(KeyCode.D)) cameraPosition.x += cameraSpeed;
-        if(Input.GetKey(KeyCode.A)) cameraPosition.x -= cameraSpeed;
+        var camSpeed = Input.GetKey(KeyCode.LeftShift) ? cameraSpeed * 3 : cameraSpeed;
+
+        if (Input.GetKey(KeyCode.W)) cameraPosition.y += camSpeed;
+        if(Input.GetKey(KeyCode.S)) cameraPosition.y -= camSpeed;
+        if(Input.GetKey(KeyCode.D)) cameraPosition.x += camSpeed;
+        if(Input.GetKey(KeyCode.A)) cameraPosition.x -= camSpeed;
         
         transform.position = cameraPosition;
 
-        if (Input.GetAxis("Mouse ScrollWheel") > 0) ZoomIn();
-        if (Input.GetAxis("Mouse ScrollWheel") < 0) ZoomOut();
+        var zmSpeed = Input.GetKey(KeyCode.LeftShift) ? Mathf.Sqrt(Mathf.Sqrt(zoomSpeed)) : zoomSpeed;
+        if (Input.GetAxis("Mouse ScrollWheel") > 0) Zoom(1 / zmSpeed);
+        if (Input.GetAxis("Mouse ScrollWheel") < 0) Zoom(zmSpeed);
+    }
+
+    public void Zoom(float zoom)
+    {
+        cameraFreeWalk.fieldOfView *= zoom;
+        if (cameraFreeWalk.fieldOfView < minZoomFOV) cameraFreeWalk.fieldOfView = minZoomFOV;
+        if (cameraFreeWalk.fieldOfView > maxZoomFOV) cameraFreeWalk.fieldOfView = maxZoomFOV;
     }
 
     public void ZoomIn()

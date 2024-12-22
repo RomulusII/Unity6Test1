@@ -471,3 +471,4 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 Model/UnityOyun/Library/
+Model/UnityOyun/Temp/

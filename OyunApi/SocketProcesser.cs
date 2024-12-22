@@ -56,29 +56,11 @@ public class SocketProcesser
                 switch (request.Action)
                 {
                     case nameof(RequestActionType.Login):
-                        var loginReq = JsonSerializer.Deserialize<LoginRequest>(message);
-                        var user = await GameServiceStatic.PlayerService.Login(loginReq.Email, loginReq.Password);                         
-
-                        if (user == null)
-                        {
-                            await player.SendMessage("Kullanıcı adı veya parola yanlış!");
-                            break;
-                        }
-
-                        player.Player = user;
-
-                        Console.WriteLine($"Oyuncu giriş yaptı: {player.Player.Email}");
-                        await player.SendMessage($"Hoş geldin {player.Player.Name}!");
+                        await HandleLoginRequest(player, message);
                         break;
 
                     case nameof(RequestActionType.GetObjects):
-                        var objects = player.GetOwnedObjects(); // Oyuncunun sahip olduğu nesneler
-                        var response = new ResponseMessage
-                        {
-                            Action = "object_list",
-                            Data = JsonSerializer.Serialize(objects)
-                        };
-                        await player.SendMessage(JsonSerializer.Serialize(response));
+                        await HandleGetObjectsRequest(player);
                         break;
 
                     default:
@@ -91,6 +73,35 @@ public class SocketProcesser
         {
             Console.WriteLine($"Mesaj işlenirken hata oluştu: {ex.Message}");
         }
+    }
+
+    private async Task HandleLoginRequest(PlayerSocket player, string message)
+    {
+        var loginReq = JsonSerializer.Deserialize<LoginRequest>(message);
+        var user = await GameServiceStatic.PlayerService.Login(loginReq.Email, loginReq.Password);
+
+        if (user == null)
+        {
+            await SendLoginResponse(player, false, "Kullanıcı adı veya parola yanlış!");
+            return;
+        }
+
+        player.Player = user;
+
+        Console.WriteLine($"Oyuncu giriş yaptı: {player.Player.Email}");
+
+        await SendLoginResponse(player, true, $"Hoş geldin {player.Player.Name}!");
+    }
+
+    private async Task HandleGetObjectsRequest(PlayerSocket player)
+    {
+        var objects = player.GetOwnedObjects(); // Oyuncunun sahip olduğu nesneler
+        var response = new ResponseMessage
+        {
+            Action = "object_list",
+            Data = JsonSerializer.Serialize(objects)
+        };
+        await player.SendMessage(JsonSerializer.Serialize(response));
     }
 
     // WebSocket'ten mesaj alma metodu
@@ -109,6 +120,16 @@ public class SocketProcesser
         }
 
         return null;
+    }
+
+    public async Task SendLoginResponse(PlayerSocket player, bool success, string message)
+    {
+        var loginResponse = new LoginResponse
+        {
+            Success = success,
+            Message = message
+        };
+        await player.SendMessage(JsonSerializer.Serialize(loginResponse));
     }
 }
 
@@ -159,6 +180,13 @@ public class PlayerSocket
         return Player != null;
     }
 
+}
+
+
+public class LoginResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; }
 }
 
 public class LoginRequest
