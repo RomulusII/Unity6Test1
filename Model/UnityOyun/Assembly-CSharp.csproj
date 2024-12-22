@@ -70,6 +70,7 @@
     <Compile Include="Assets\Model\Player.cs" />
     <Compile Include="Assets\Model\CoordinateBase.cs" />
     <Compile Include="Assets\Model\CellTerrain.cs" />
+    <Compile Include="Assets\Model\SocketMessage.cs" />
     <Compile Include="Assets\CameraMovement.cs" />
     <Compile Include="Assets\Model\MapCellBase.cs" />
   </ItemGroup>
