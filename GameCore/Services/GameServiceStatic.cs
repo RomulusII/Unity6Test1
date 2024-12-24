@@ -16,6 +16,7 @@ namespace GameCore.Services
         public static GameService GameService { get; } = new(_logger);
 
         public static PlayerService PlayerService { get; } = new(_logger);
+
     }
 
     public class GameService
@@ -26,6 +27,8 @@ namespace GameCore.Services
 
         public GameContext GameContext;
         public Harita Harita { get; }
+
+        public MapService MapService { get; }
         public GameEngine GameEngine { get; } = new();
 
         public GameService(ILogger logger)
@@ -34,8 +37,9 @@ namespace GameCore.Services
             GameContext = new GameContext();
             Harita = new();
             HaritaCreator = new(Harita);
+            MapService = new(logger);
 
-            HaritaCreator.InitHucrelerAsync().Wait();
+            HaritaCreator.InitHucrelerAsync();
         }
     }
 
@@ -57,20 +61,41 @@ namespace GameCore.Services
                 return;
             }
 
-            await LogoutIfLoggedIn(playerSocket);
+            if (LoggedInPlayers.TryGetValue(playerSocket.Player.Id, out PlayerSocket? loggedInPlayer))
+            {
+                // Same client wants login, do nothing...
+                if (loggedInPlayer == playerSocket)
+                    return;
+
+                try
+                {
+                    await loggedInPlayer.Logout(System.Net.WebSockets.WebSocketCloseStatus.PolicyViolation,
+                                                "Another login detected");
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError($"Cant logout old login. Error: {ex.Message}");
+                    // ignore exception
+                }
+
+                LoggedInPlayers.Remove(playerSocket.Player.Id);
+            }
+
             LoggedInPlayers.Add(playerSocket.Player.Id, playerSocket);
         }
 
-        private async Task LogoutIfLoggedIn(PlayerSocket ps)
+        public async Task Logout(PlayerSocket ps)
         {
-            if (ps?.Player != null && LoggedInPlayers.ContainsKey(ps.Player.Id))
+            if (ps?.Player != null && LoggedInPlayers.TryGetValue(ps.Player.Id, 
+                                                                  out PlayerSocket? loggedInPlayer))
             {
-                var loggedInPlayer = LoggedInPlayers[ps.Player.Id];
-                await loggedInPlayer.Logout(System.Net.WebSockets.WebSocketCloseStatus.PolicyViolation, "Another login detected");
+                await loggedInPlayer.Logout(System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, 
+                    "User Logout");
+
                 LoggedInPlayers.Remove(ps.Player.Id);
             }
         }
-     
+
         public static async Task<Player?> GetPlayer(int userId)
         {
             return await Task.Run(() =>

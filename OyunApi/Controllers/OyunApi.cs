@@ -59,7 +59,6 @@ namespace OyunApi.Controllers
 
                     for (int j = minX; j < maxX; j++)
                     {
-
                         var hucre = GameServiceStatic.GameService.Harita.Hucreler[j, i];
                         hucreLine.Add(hucre);
                     }

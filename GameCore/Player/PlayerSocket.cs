@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using System.Net.WebSockets;
 using System.Text;
 using Model;
+using System.Windows.Markup;
 // --- Yardımcı Sınıflar ---
 
 // Oyuncu sınıfı (Actor-Like)
@@ -66,6 +67,7 @@ public class PlayerSocket
         }
         else if (result.MessageType == WebSocketMessageType.Close)
         {
+            await GameServiceStatic.PlayerService.Logout(this);
             Console.WriteLine("İstemci bağlantıyı kapattı.");
         }
 
@@ -106,6 +108,9 @@ public class PlayerSocket
                     case nameof(SocketMessageType.GetObjects):
                         await HandleGetObjectsRequest();
                         break;
+                    case nameof(SocketMessageType.GetMap):
+                        await HandleGetMapRequest(request.Data);
+                        break;
 
                     default:
                         await SendErrorResponse("Bilinmeyen bir eylem!");
@@ -120,6 +125,23 @@ public class PlayerSocket
         }
     }
 
+    private async Task HandleGetMapRequest(string? message)
+    {
+        if (string.IsNullOrEmpty(message))
+        {
+            await SendErrorResponse("Geçersiz harita isteği!");
+            return;
+        }
+
+        var mapReq = JsonConvert.DeserializeObject<MapRequest>(message);
+        if (mapReq == null)
+        {
+            await SendErrorResponse("Harita isteği çözümlenemedi!");
+            return;
+        }
+
+        //asd asd asd asd
+    }
 
     private async Task HandleLoginRequest(string? message)
     {
@@ -145,9 +167,9 @@ public class PlayerSocket
             return;
         }
 
-        await GameServiceStatic.PlayerService.Login(this);
-
         Player = user;
+
+        await GameServiceStatic.PlayerService.Login(this);
 
         Console.WriteLine($"Oyuncu giriş yaptı: {Player.Email}");
 

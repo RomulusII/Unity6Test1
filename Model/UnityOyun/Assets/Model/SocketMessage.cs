@@ -9,6 +9,7 @@ namespace Model.UnityOyun.Assets.Model
     {
         LoginRequest,
         LoginResponse,
+        GetMap,
         GetObjects,
         ErrorResponse,
     }
@@ -27,6 +28,22 @@ namespace Model.UnityOyun.Assets.Model
     {
         // Base class properties
     }
+
+    [Serializable]
+    public class MapRequest : MessageContentBase
+    {
+        public int? X { get; set; }
+        public int? Y { get; set; }
+    }
+
+    [Serializable]
+    public class MapResponse : MessageContentBase
+    {
+
+        public int? X { get; set; }
+        public int? Y { get; set; }
+    }
+
 
     [Serializable]
     public class LoginRequest : MessageContentBase
