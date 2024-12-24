@@ -4,7 +4,7 @@ using GameCore.Services;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-var SocketProcesser = new SocketProcesser();
+var SocketProcesser = new SocketProcessor();
 
 // Aktif bağlantıları ve oyuncuları tutan koleksiyon
 

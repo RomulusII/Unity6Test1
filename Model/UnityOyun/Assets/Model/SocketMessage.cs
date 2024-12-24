@@ -1,34 +1,58 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
+#if(UNITY)
+using UnityEngine;
+#endif
 namespace Model.UnityOyun.Assets.Model
 {
-    public class LoginResponse
+    public enum SocketMessageType
     {
-        public bool Success { get; set; }
-        public string Message { get; set; }
-    }
-
-    public class LoginRequest
-    {
-        public string Email { get; set; }
-        public string Password { get; set; }
+        LoginRequest,
+        LoginResponse,
+        GetObjects,
+        ErrorResponse,
     }
 
     // İstemci tarafından gönderilen mesaj model
+
+    [Serializable]
     public class SocketMessage
     {
-        public string Action { get; set; } = "";
-        public string Data { get; set; } = "";
+        public string? MessType { get; set; }
+        public string? Data { get; set; }
     }
 
-    // Sunucunun gönderdiği yanıt model
-    public class ResponseMessage
+    [Serializable]
+    public abstract class MessageContentBase
     {
-        public string Action { get; set; } = "";
-        public string Data { get; set; } = "";
+        // Base class properties
     }
+
+    [Serializable]
+    public class LoginRequest : MessageContentBase
+    {
+        public string? Email { get; set; }
+        public string? Password { get; set; }
+    }
+
+    [Serializable]
+    public class LoginResponse : MessageContentBase
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+    }
+
+    [Serializable]
+    public class ErrorResponse : MessageContentBase
+    {
+        public string? Message { get; set; }
+    }
+
+    [Serializable]
+    public class ResponseMessage : MessageContentBase
+    {
+        public string? Action { get; set; }
+        public string? Data { get; set; }
+    }
+
 }

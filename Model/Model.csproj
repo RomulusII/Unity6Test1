@@ -23,4 +23,8 @@
     <Compile Include="UnityOyun\Assets\Model\SocketMessage.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+  </ItemGroup>
+
 </Project>

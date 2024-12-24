@@ -79,7 +79,7 @@ public partial class MainWindow : Window
     }
 
 
-    void timer_Tick(object sender, EventArgs e)
+    void timer_Tick(object? sender, EventArgs e)
     {
         RefreshInfo();
     }
@@ -124,7 +124,7 @@ public partial class MainWindow : Window
 
     private async void button_Click_1(object sender, RoutedEventArgs e)
     {
-        RefreshCommunities();
+        await Task.Run(() => RefreshCommunities());
     }
 
     private void OnTanimsizRenk(int x, int y, MapCellDecoder hucre)
@@ -148,7 +148,7 @@ public partial class MainWindow : Window
         RefreshInfoOnMouse(e);
     }
 
-    private string hucreInfo;
+    private string? hucreInfo;
 
     private void RefreshInfo()
     {
@@ -232,6 +232,9 @@ public partial class MainWindow : Window
         GameFieldCanvas.Height= GameServiceStatic.GameService.Harita.MaxY;
 
         SolidColorBrush newColor = new SolidColorBrush(red);
+
+        if (GameServiceStatic.GameService.GameContext.Units == null)
+            return;
 
         foreach (var u in GameServiceStatic.GameService.GameContext.Units)
         {

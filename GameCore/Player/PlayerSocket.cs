@@ -1,47 +1,10 @@
 ﻿using GameCore.Services;
-using Model;
 using Model.UnityOyun.Assets.Model;
-using System.Collections.Concurrent;
+using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json;
 using System.Net.WebSockets;
 using System.Text;
-using System.Text.Json;
-
-public class SocketProcesser
-{
-    public List<PlayerSocket> activeConnections = new List<PlayerSocket>();
-
-    // Oyuncu bağlantısını yöneten metot
-    public async Task HandleNewConnection(WebSocket webSocket)
-    {
-        var playerId = Guid.NewGuid().ToString(); // Benzersiz bir oyuncu ID'si
-        var playerSocket = new PlayerSocket(webSocket);
-        activeConnections.Add(playerSocket);
-
-        try
-        {
-            // WebSocket bağlantısı açık olduğu sürece mesajları dinle
-            await playerSocket.ListenConnection();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Bağlantı hatası: {ex.Message}");
-        }
-        finally
-        {
-            // Bağlantıyı temizle
-            activeConnections.Remove(playerSocket);
-            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Bağlantı kapatıldı", CancellationToken.None);
-            Console.WriteLine($"Oyuncu {playerId} bağlantısını kapattı.");
-        }
-    }
-}
-
-public enum RequestActionType
-{
-    Login,
-    GetObjects
-}
-
+using Model;
 // --- Yardımcı Sınıflar ---
 
 // Oyuncu sınıfı (Actor-Like)
@@ -51,7 +14,7 @@ public class PlayerSocket
     private WebSocket webSocket { get; }
     private List<string> OwnedObjects { get; } = new List<string>();
 
-    public PlayerBase Player { get; set; }
+    public PlayerBase? Player { get; set; }
 
     public PlayerSocket(WebSocket webSocket)
     {
@@ -114,29 +77,38 @@ public class PlayerSocket
     {
         try
         {
+            var settings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.Indented,
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
+
+            // Add the polymorphic converter
+            settings.Converters.Add(new PolymorphicJsonConverter<MessageContentBase>());
+
             // Mesajı JSON olarak çözümle
-            var request = JsonSerializer.Deserialize<SocketMessage>(message);
+            var request = JsonConvert.DeserializeObject<SocketMessage>(message, settings);
 
             if (request != null)
             {
-                if(!LoggedIn && request.Action != nameof(RequestActionType.Login))
+                if (!LoggedIn && request.MessType != nameof(SocketMessageType.LoginRequest))
                 {
-                    await SendMessage("Önce giriş yapmalısınız!");
+                    await SendErrorResponse("Önce giriş yapmalısınız!");
                     return;
                 }
 
-                switch (request.Action)
+                switch (request.MessType)
                 {
-                    case nameof(RequestActionType.Login):
-                        await HandleLoginRequest(message);
+                    case nameof(SocketMessageType.LoginRequest):
+                        await HandleLoginRequest(request.Data);
                         break;
 
-                    case nameof(RequestActionType.GetObjects):
+                    case nameof(SocketMessageType.GetObjects):
                         await HandleGetObjectsRequest();
                         break;
 
                     default:
-                        await SendMessage("Bilinmeyen bir eylem!");
+                        await SendErrorResponse("Bilinmeyen bir eylem!");
                         break;
                 }
             }
@@ -144,20 +116,36 @@ public class PlayerSocket
         catch (Exception ex)
         {
             Console.WriteLine($"Mesaj işlenirken hata oluştu: {ex.Message}");
+            await SendErrorResponse("Server Error: "+ ex.Message);
         }
     }
 
 
-    private async Task HandleLoginRequest(string message)
+    private async Task HandleLoginRequest(string? message)
     {
-        var loginReq = JsonSerializer.Deserialize<LoginRequest>(message);
-        var user = await GameServiceStatic.PlayerService.Login(loginReq.Email, loginReq.Password);
+        if(message == null)
+        {
+            await SendLoginResponse(false, "Geçersiz giriş isteği!");
+            return;
+        }
+
+        var loginReq = JsonConvert.DeserializeObject<LoginRequest>(message);
+
+        if (loginReq == null)
+        {
+            await SendLoginResponse(false, "Geçersiz giriş isteği!");
+            return;
+        }
+
+        var user = await PlayerService.GetPlayer(loginReq.Email, loginReq.Password);
 
         if (user == null)
         {
             await SendLoginResponse(false, "Kullanıcı adı veya parola yanlış!");
             return;
         }
+
+        await GameServiceStatic.PlayerService.Login(this);
 
         Player = user;
 
@@ -172,12 +160,16 @@ public class PlayerSocket
         var response = new ResponseMessage
         {
             Action = "object_list",
-            Data = JsonSerializer.Serialize(objects)
+            Data = JsonConvert.SerializeObject(objects)
         };
-        await SendMessage(JsonSerializer.Serialize(response));
+        await SendMessage(response);
     }
 
-
+    public async Task Logout(WebSocketCloseStatus closeStatus, string message)
+    {
+        LoggedIn = false;
+        await webSocket.CloseAsync(closeStatus, message, CancellationToken.None);
+    }
 
     public async Task SendLoginResponse(bool success, string message)
     {
@@ -186,7 +178,18 @@ public class PlayerSocket
             Success = success,
             Message = message
         };
-        await SendMessage(JsonSerializer.Serialize(loginResponse));
+        await SendMessage(loginResponse);
+    }
+
+ 
+
+    public async Task SendErrorResponse(string message)
+    {
+        var loginResponse = new ErrorResponse
+        {
+            Message = message
+        };
+        await SendMessage(loginResponse);
     }
 
     // Oyuncunun sahip olduğu nesneleri döndür
@@ -196,18 +199,34 @@ public class PlayerSocket
     }
 
     // Oyuncuya mesaj gönder
-    public async Task SendMessage(string message)
+    public async Task SendMessage(MessageContentBase content)
     {
-        var buffer = Encoding.UTF8.GetBytes(message);
+        var settings = new JsonSerializerSettings
+        {
+            Formatting = Formatting.Indented,
+            ContractResolver = new CamelCasePropertyNamesContractResolver()
+        };
+
+        var serializedContent = JsonConvert.SerializeObject(content, settings);
+        Console.WriteLine($"Serialized Content: {serializedContent}");
+
+        var message = new SocketMessage
+        {
+            MessType = content.GetType().Name, // Use Name instead of ToString()
+            Data = serializedContent
+        };
+
+        var serializedMessage = JsonConvert.SerializeObject(message, settings);
+        Console.WriteLine($"Serialized Message: {serializedMessage}");
+
+        var buffer = Encoding.UTF8.GetBytes(serializedMessage);
         var segment = new ArraySegment<byte>(buffer);
         await webSocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
     }
 
-    public async Task<bool> LogIn(LoginRequest loginRequest)
-    {
-        Player = await GameServiceStatic.PlayerService.Login(loginRequest.Email, loginRequest.Password);
-        return Player != null;
-    }
-
 }
 
+public class ConnectedPlayer : Player 
+{
+    public PlayerSocket? PlayerSocket { get; set; }
+}

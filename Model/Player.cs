@@ -4,6 +4,6 @@ namespace Model
 {
     public class Player : PlayerBase
     {
-        public ICollection<Unit> Units { get; set; }
+        public ICollection<Unit> Units { get; set; } = new List<Unit>();
     }
 }

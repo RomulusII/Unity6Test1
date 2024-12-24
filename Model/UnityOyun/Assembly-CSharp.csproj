@@ -70,6 +70,7 @@
     <Compile Include="Assets\Model\Player.cs" />
     <Compile Include="Assets\Model\CoordinateBase.cs" />
     <Compile Include="Assets\Model\CellTerrain.cs" />
+    <Compile Include="Assets\Model\SocketMessage.cs" />
     <Compile Include="Assets\CameraMovement.cs" />
     <Compile Include="Assets\Model\MapCellBase.cs" />
   </ItemGroup>
@@ -577,6 +578,10 @@
     </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>Library\PackageCache\com.unity.nuget.mono-cecil\Mono.Cecil.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>Library\PackageCache\com.unity.nuget.newtonsoft-json\Runtime\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEditor.iOS.Extensions.Xcode">

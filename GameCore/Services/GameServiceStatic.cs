@@ -2,6 +2,7 @@
 using GameCore.Creator;
 using GameCore.Map;
 using GameCore.Mechanics;
+using Microsoft.Extensions.Logging;
 using Model;
 using Model.UnityOyun.Assets.Model;
 
@@ -10,16 +11,16 @@ namespace GameCore.Services
 
     public static class GameServiceStatic
     {
-        //private static GameService game;
-        public static GameService GameService { get; } = new(); 
+        private static readonly ILogger<GameService> _logger;
+        
+        public static GameService GameService { get; } = new(_logger);
 
-        public static PlayerService PlayerService { get; } = new();
+        public static PlayerService PlayerService { get; } = new(_logger);
     }
 
     public class GameService
     {
-        //public Dictionary<int, Player> AllPlayers { get; } = new Dictionary<int, Player>();
-        //public Dictionary<int, Unit> AllUnits { get; } = new Dictionary<int, Unit>();
+        private readonly ILogger _logger;
 
         public HaritaCreator HaritaCreator;
 
@@ -27,44 +28,66 @@ namespace GameCore.Services
         public Harita Harita { get; }
         public GameEngine GameEngine { get; } = new();
 
-        public GameService()
+        public GameService(ILogger logger)
         {
+            _logger = logger;
             GameContext = new GameContext();
             Harita = new();
             HaritaCreator = new(Harita);
 
-            HaritaCreator.InitHucrelerAsync();
+            HaritaCreator.InitHucrelerAsync().Wait();
         }
     }
 
     public class PlayerService
     {
-        public Dictionary<int, Player> LoggedInPlayers { get; } = new Dictionary<int, Player>();
+        public Dictionary<int, PlayerSocket> LoggedInPlayers { get; } = new Dictionary<int, PlayerSocket>();
 
-        public async Task<Player?> Login(string email, string password)
+        private readonly ILogger _logger;
+
+        public PlayerService(ILogger logger)
         {
-            var player = await GetPlayer(email, password);
-            if (player == null) {
-                return null;
+            _logger = logger;
+        }
+
+        public async Task Login(PlayerSocket playerSocket)
+        {
+            if (playerSocket.Player == null) {
+                _logger.Log(LogLevel.Error, "Player is null");
+                return;
             }
 
-            LoggedInPlayers.Add(player.Id, player);
-            return player;
+            await LogoutIfLoggedIn(playerSocket);
+            LoggedInPlayers.Add(playerSocket.Player.Id, playerSocket);
+        }
+
+        private async Task LogoutIfLoggedIn(PlayerSocket ps)
+        {
+            if (ps?.Player != null && LoggedInPlayers.ContainsKey(ps.Player.Id))
+            {
+                var loggedInPlayer = LoggedInPlayers[ps.Player.Id];
+                await loggedInPlayer.Logout(System.Net.WebSockets.WebSocketCloseStatus.PolicyViolation, "Another login detected");
+                LoggedInPlayers.Remove(ps.Player.Id);
+            }
         }
      
         public static async Task<Player?> GetPlayer(int userId)
         {
             return await Task.Run(() =>
             {
-                return GameServiceStatic.GameService.GameContext.Players.Where(p => p.Id == userId).FirstOrDefault();
+                return GameServiceStatic.GameService.GameContext.Players?.Where(p => p.Id == userId).FirstOrDefault();
             });
         }
 
-        public static async Task<Player?> GetPlayer(string email, string password)
+        public static async Task<Player?> GetPlayer(string? email, string? password)
         {
             return await Task.Run(() =>
             {
-                return GameServiceStatic.GameService.GameContext.Players.Where(p => p.Email.Equals(email) && p.Password == password).FirstOrDefault();
+                return GameServiceStatic.GameService.GameContext.Players?
+                            .Where(p => p.Email != null 
+                                && p.Email.Equals(email) 
+                                && p.Password == password)
+                            .FirstOrDefault();
             });
         }
     }

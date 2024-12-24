@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Net.WebSockets;
 using UnityEngine;
+using Model.UnityOyun.Assets.Model;
+using Newtonsoft.Json;
 
 public class ClientSocket : MonoBehaviour
 {
@@ -14,6 +16,15 @@ public class ClientSocket : MonoBehaviour
     public string serverUri = "ws://localhost:8080/ws"; // WebSocket server address
 
     public bool autoConnectOnStart = true;
+
+    public bool LoggedIn { get; private set; }
+
+    // Define the delegates and events
+    public delegate void LoginResponseReceivedEventHandler(object sender, LoginResponse loginResponse);
+    public event LoginResponseReceivedEventHandler LoginResponseReceived;
+
+    public delegate void ErrorReceivedEventHandler(object sender, string errorMessage);
+    public event ErrorReceivedEventHandler ErrorReceived;
 
     private async void Start()
     {
@@ -37,9 +48,6 @@ public class ClientSocket : MonoBehaviour
             {
                 Debug.Log("WebSocket connection established!");
                 _ = ReceiveMessages(); // Start receiving messages in the background
-
-                // Send initial message
-                SendTextMessage("Hello from Unity!");
             }
         }
         catch (Exception ex)
@@ -62,6 +70,7 @@ public class ClientSocket : MonoBehaviour
                 {
                     string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
                     Debug.Log($"Message received: {message}");
+                    HandleMessage(message);
                 }
                 else if (result.MessageType == WebSocketMessageType.Close)
                 {
@@ -76,19 +85,43 @@ public class ClientSocket : MonoBehaviour
         }
     }
 
-    public async void SendTextMessage(string message)
+    public async Task SendTextMessage(string message)
     {
-        if (webSocket == null || webSocket.State != WebSocketState.Open)
-        {
-            Debug.LogWarning("WebSocket is not connected. Cannot send message.");
-            return;
-        }
-
         try
         {
+            if (webSocket == null || webSocket.State != WebSocketState.Open)
+            {
+                await ConnectToWebSocket();
+            }
+
+
+
+            if (webSocket == null || webSocket.State != WebSocketState.Open)
+            {
+                Debug.LogWarning("WebSocket is not connected. Cannot send message.");
+                return;
+            }
             byte[] messageBytes = Encoding.UTF8.GetBytes(message);
             await webSocket.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
             Debug.Log($"Message sent: {message}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to send message: {ex.Message}");
+        }
+    }
+
+    public async Task SendMessage(MessageContentBase message)
+    {
+        try
+        {
+            var socketMessage = new SocketMessage
+            {
+                MessType = message.GetType().Name,
+                Data = JsonConvert.SerializeObject(message)
+            };
+
+            await SendTextMessage(JsonConvert.SerializeObject(socketMessage));
         }
         catch (Exception ex)
         {
@@ -110,6 +143,43 @@ public class ClientSocket : MonoBehaviour
             {
                 Debug.LogError($"Error during WebSocket shutdown: {ex.Message}");
             }
+        }
+    }
+
+    private void HandleMessage(string message)
+    {
+        try
+        {
+            var socketMessage = JsonConvert.DeserializeObject<SocketMessage>(message);
+            var x = nameof(SocketMessageType.LoginResponse);
+            switch (socketMessage.MessType)
+            {
+                case nameof(SocketMessageType.LoginResponse):
+                    var loginResponse = JsonConvert.DeserializeObject<LoginResponse>(socketMessage.Data);
+                    Debug.Log($"Login response received: {loginResponse.Success}");
+                    if (loginResponse.Success)
+                    {
+                        LoggedIn = true;
+                    }
+                    // Raise the LoginResponseReceived event
+                    LoginResponseReceived?.Invoke(this, loginResponse);
+                    break;
+                case nameof(SocketMessageType.ErrorResponse):
+                    Debug.Log($"Server reports error: {socketMessage.Data.ToString()}");
+                    // Raise the ErrorReceived event
+                    ErrorReceived?.Invoke(this, socketMessage.Data);
+                    break;
+
+                default:
+                    Debug.LogWarning($"Unknown message type: {socketMessage.MessType}");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            // show in log
+            Debug.LogError($"Failed to handle message: {ex.Message}");
+            throw;
         }
     }
 }
